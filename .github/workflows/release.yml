@@ -1,6 +1,10 @@
 name: Create Draft Release
 
 on:
+  workflow_run:
+    workflows: ["Test"]
+    types:
+      - completed
   push:
     tags:
       - "*.*.*" # Push events to matching v*, i.e. v1.0.0, v20.15.10
