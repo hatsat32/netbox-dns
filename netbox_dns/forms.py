@@ -17,6 +17,7 @@ from django.urls import reverse_lazy
 
 from extras.forms import AddRemoveTagsForm
 from extras.models.tags import Tag
+from tenancy.forms import TenancyFilterForm, TenancyForm
 from utilities.forms import (
     CSVModelForm,
     BootstrapMixin,
@@ -30,6 +31,9 @@ from utilities.forms import (
     APISelect,
     StaticSelectMultiple,
     add_blank_choice,
+    DatePicker,
+    CommentField,
+    BOOLEAN_WITH_BLANK_CHOICES,
 )
 from .fields import CustomDynamicModelMultipleChoiceField
 from .models import NameServer, Record, Zone
@@ -47,7 +51,7 @@ class BulkEditForm(forms.Form):
             self.nullable_fields = self.Meta.nullable_fields
 
 
-class ZoneForm(BootstrapMixin, forms.ModelForm):
+class ZoneForm(BootstrapMixin, forms.ModelForm, TenancyForm):
     """Form for creating a new Zone object."""
 
     def __init__(self, *args, **kwargs):
@@ -146,6 +150,7 @@ class ZoneForm(BootstrapMixin, forms.ModelForm):
         help_text="Minimum TTL for negative results, e.g. NXRRSET",
         validators=[MinValueValidator(1)],
     )
+    comments = CommentField()
 
     class Meta:
         model = Zone
@@ -153,6 +158,8 @@ class ZoneForm(BootstrapMixin, forms.ModelForm):
             "name",
             "status",
             "nameservers",
+            "auto_renew",
+            "expire_date",
             "default_ttl",
             "tags",
             "soa_ttl",
@@ -164,20 +171,48 @@ class ZoneForm(BootstrapMixin, forms.ModelForm):
             "soa_retry",
             "soa_expire",
             "soa_minimum",
+            "tenant_group",
+            "tenant",
+            "comments",
+        )
+        fieldsets = (
+            ("Zone", ("name", "status", "default_ttl", "nameservers", "tags")),
+            ("Date", ("auto_renew", "expire_date")),
+            (
+                "SOA",
+                (
+                    "soa_ttl",
+                    "soa_mname",
+                    "soa_rname",
+                    "soa_serial_auto",
+                    "soa_serial",
+                    "soa_refresh",
+                    "soa_retry",
+                    "soa_expire",
+                    "soa_minimum",
+                ),
+            ),
+            ("Tenancy", ("tenant_group", "tenant")),
         )
         widgets = {
             "status": StaticSelect(),
             "soa_mname": StaticSelect(),
+            "expire_date": DatePicker(),
         }
         help_texts = {
             "soa_mname": "Primary name server for the zone",
         }
 
 
-class ZoneFilterForm(BootstrapMixin, forms.Form):
+class ZoneFilterForm(BootstrapMixin, TenancyFilterForm, forms.Form):
     """Form for filtering Zone instances."""
 
     model = Zone
+    field_groups = [
+        ["q", "tag"],
+        ["name", "status", "auto_renew", "expire_date", "nameservers"],
+        ["tenant_group_id", "tenant_id"],
+    ]
 
     q = CharField(
         required=False,
@@ -192,6 +227,16 @@ class ZoneFilterForm(BootstrapMixin, forms.Form):
     name = CharField(
         required=False,
         label="Name",
+    )
+    auto_renew = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect(
+            choices=BOOLEAN_WITH_BLANK_CHOICES,
+        ),
+    )
+    expire_date = forms.DateTimeField(
+        required=False,
+        widget=DatePicker(),
     )
     nameservers = CustomDynamicModelMultipleChoiceField(
         queryset=NameServer.objects.all(),

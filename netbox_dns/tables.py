@@ -21,6 +21,9 @@ class ZoneTable(BaseTable):
     default_ttl = tables.Column(
         verbose_name="Default TTL",
     )
+    tenant = tables.Column(
+        linkify=True,
+    )
 
     class Meta(BaseTable.Meta):
         model = Zone
@@ -33,11 +36,15 @@ class ZoneTable(BaseTable):
             "soa_mname",
             "soa_rname",
             "soa_serial",
+            "auto_renew",
+            "expire_date",
+            "tenant",
         )
         default_columns = (
             "pk",
             "name",
             "status",
+            "expire_date",
             "tags",
         )
 
