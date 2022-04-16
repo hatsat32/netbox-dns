@@ -25,13 +25,17 @@ from utilities.forms import (
     CSVModelChoiceField,
     DynamicModelChoiceField,
     APISelect,
+    CommentField,
+    DatePicker,
+    BOOLEAN_WITH_BLANK_CHOICES,
     add_blank_choice,
 )
+from tenancy.forms import TenancyFilterForm, TenancyForm
 
 from netbox_dns.models import NameServer, Zone, ZoneStatusChoices
 
 
-class ZoneForm(NetBoxModelForm):
+class ZoneForm(TenancyForm, NetBoxModelForm):
     """Form for creating a new Zone object."""
 
     nameservers = DynamicModelMultipleChoiceField(
@@ -90,6 +94,7 @@ class ZoneForm(NetBoxModelForm):
         help_text="Minimum TTL for negative results, e.g. NXRRSET",
         validators=[MinValueValidator(1)],
     )
+    comments = CommentField()
     fieldsets = (
         (
             "Zone",
@@ -98,6 +103,8 @@ class ZoneForm(NetBoxModelForm):
                 "status",
                 "nameservers",
                 "default_ttl",
+                "auto_renew",
+                "expire_date",
             ),
         ),
         (
@@ -114,6 +121,7 @@ class ZoneForm(NetBoxModelForm):
                 "soa_serial",
             ),
         ),
+        ("Tenancy", ("tenant_group", "tenant")),
         ("Tags", ("tags",)),
     )
 
@@ -176,6 +184,8 @@ class ZoneForm(NetBoxModelForm):
             "status",
             "nameservers",
             "default_ttl",
+            "auto_renew",
+            "expire_date",
             "tags",
             "soa_ttl",
             "soa_mname",
@@ -186,17 +196,21 @@ class ZoneForm(NetBoxModelForm):
             "soa_retry",
             "soa_expire",
             "soa_minimum",
+            "tenant_group",
+            "tenant",
+            "comments",
         )
         widgets = {
             "status": StaticSelect(),
             "soa_mname": StaticSelect(),
+            "expire_date": DatePicker(),
         }
         help_texts = {
             "soa_mname": "Primary name server for the zone",
         }
 
 
-class ZoneFilterForm(NetBoxModelFilterSetForm):
+class ZoneFilterForm(TenancyFilterForm, NetBoxModelFilterSetForm):
     """Form for filtering Zone instances."""
 
     status = forms.ChoiceField(
@@ -207,6 +221,16 @@ class ZoneFilterForm(NetBoxModelFilterSetForm):
     name = CharField(
         required=False,
         label="Name",
+    )
+    auto_renew = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect(
+            choices=BOOLEAN_WITH_BLANK_CHOICES,
+        ),
+    )
+    expire_date = forms.DateTimeField(
+        required=False,
+        widget=DatePicker(),
     )
     nameservers = DynamicModelMultipleChoiceField(
         queryset=NameServer.objects.all(),

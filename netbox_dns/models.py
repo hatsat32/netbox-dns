@@ -86,6 +86,15 @@ class Zone(NetBoxModel):
         default=ZoneStatusChoices.STATUS_ACTIVE,
         blank=True,
     )
+    expire_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Expire date",
+    )
+    auto_renew = models.BooleanField(
+        default=False,
+        null=True,
+    )
     nameservers = models.ManyToManyField(
         NameServer,
         related_name="zones",
@@ -151,6 +160,16 @@ class Zone(NetBoxModel):
         help_text="Automatically generate the SOA Serial field",
         default=True,
     )
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="zones",
+        blank=True,
+        null=True,
+    )
+    comments = models.TextField(
+        blank=True,
+    )
 
     objects = ZoneManager()
 
@@ -166,6 +185,9 @@ class Zone(NetBoxModel):
         "soa_retry",
         "soa_expire",
         "soa_minimum",
+        "expire_date",
+        "auto_renew",
+        "tenant",
     ]
 
     class Meta:
